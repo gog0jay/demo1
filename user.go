@@ -25,9 +25,9 @@ func NewUser(conn net.Conn) *User {
 }
 
 // ListenMessage 监听当前User channel的方法。 一但有消息，就直接发送给客户端
-func (this *User) ListenMessage() {
+func (u *User) ListenMessage() {
 	for {
-		msg := <-this.C
-		this.conn.Write([]byte(msg + "\n"))
+		msg := <-u.C
+		u.conn.Write([]byte(msg + "\r\n"))
 	}
 }

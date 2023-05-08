@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
+	"strings"
 	"sync"
 )
 
@@ -56,15 +58,31 @@ func (s *Server) Handler(conn net.Conn) {
 	//fmt.Println("链接建立成功")
 
 	user := NewUser(conn)
-	// 1. 用户上线，将用户加入到OnlineMap中
+	// 用户上线，将用户加入到OnlineMap中
 	s.mapLock.Lock()
 	s.OnlineMap[user.Name] = user
 	s.mapLock.Unlock()
 
-	// 2. 广播当前用户上线的消息
+	// 广播当前用户上线的消息
 	s.BroadCast(user, "already online")
 
-	// 3. 当前handler阻塞
+	// 接受客户端发送的消息
+	go func() {
+		buf := make([]byte, 4096)
+		for {
+			n, err := conn.Read(buf)
+			if n == 0 {
+				s.BroadCast(user, "is offline")
+			}
+			if err != nil && err != io.EOF {
+				fmt.Print("Conn Read err: ", err)
+			}
+			// 提取用户的消息，去除最后的\n
+			msg := strings.Trim(string(buf[:]), "\r\n")
+			s.BroadCast(user, msg)
+		}
+	}()
+	// 当前handler阻塞
 	select {}
 }
 
